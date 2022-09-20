@@ -17,39 +17,40 @@ model = read_sbml_model('e_coli_core.xml')
 # Create stoichiometric matrix
 S = create_stoichiometric_matrix(model)
 
-
 # 1. Binarize S
 
 # replace _ with a binary representation of S.
 # S_bin should only contain floating point numbers (either 0. or 1.)
 
-S_bin = _
+S_bin = np.array([[1. if x!=0. else 0. for x in row] for row in S])
 
 ###### Don't touch
 def test_binary_stoichiometry_matrix():
     assert hashlib.md5(S_bin).digest() == b'\xcd\xd3\x04N\x9e\xaf\x1f\xc5\xcb9\x9f\xaaa\x00\x06['
 ###### this
 
+test_binary_stoichiometry_matrix()
 
 # 2. Compute reaction adjacency matrix A_v.
 
-A_v = _
+A_v = S_bin.T.dot(S_bin)
 
 ###### Don't touch
 def test_reaction_adjacency_matrix():
     assert hashlib.md5(A_v).digest() == b'"TTS\xba\x07\xfa\x06m{\xa6\xbc^l\\.'
 ###### this
-
+test_reaction_adjacency_matrix()
 
 # 3. Compute compound adjacency matrix A_x.
 
-A_x = _
+A_x = S_bin.dot(S_bin.T)
 
 ###### Don't touch
 def test_compound_adjacency_matrix():
     assert hashlib.md5(A_x).digest() == b'"\x1d_\\\x9a\xc3O\xfe0\x98\xf0\t3\xb8\x0e\x0c'
 ###### this
 
+test_compound_adjacency_matrix()
 
 # 4. Based on A_x, which metabolite participates in the most reactions?
 
@@ -60,13 +61,23 @@ def test_compound_adjacency_matrix():
 # replace _ with the most connected metabolite in the model;
 # needs to be of type cobra.core.metabolite.Metabolite (you can check with type())
 # e.g. type(model.metabolites[0]) == cobra.core.metabolite.Metabolite
-most_connected_metabolite = _
+
+
+
+"""
+metabolites = list(dict(sorted({model.metabolites[index[0]]:element for index,element in np.ndenumerate(A_x) if index[0]==index[1]}.items(), key=lambda item:item[1], reverse = True)).keys())[0]
+print(metabolites)
+"""
+
+metabolites_connection = dict(sorted({model.metabolites[index[0]]:element for index,element in np.ndenumerate(A_x) if index[0]==index[1]}.items(), key=lambda item:item[1], reverse = True))
+
+most_connected_metabolite = list(metabolites_connection.keys())[0]
 
 ###### Don't touch
 def test_most_connected_metabolite():
     assert hashlib.md5(most_connected_metabolite.id.encode('utf-8')).digest() == b"\x90\xf7\xa1\xa0\x1a\x0e\x92'\x02\xd1\xdd.\xb6bu\x0e"
 ###### this
-
+test_most_connected_metabolite()
 
 # 5. Based on A_x, how many reactions does metabolite atp_c participate in?
 
@@ -77,13 +88,13 @@ def test_most_connected_metabolite():
 # also supports model.metabolites.index(your_metabolite).
 
 # Replace _ with the number of reactions atp_c participates in (needs to be determined programmatically).
-atp_participation = _
+atp_participation = metabolites_connection[model.metabolites.get_by_id("atp_c")]
 
 ###### Don't touch
 def test_atp_participation():
     assert atp_participation == 13
 ###### this
-
+test_atp_participation()
 
 # 6. How many metabolites do the reactions ACALD and ALCD2x share. Those IDs refer
 # to Acetaldehyde dehydrogenase (acetylating) and Alcohol dehydrogenase (ethanol)
@@ -95,15 +106,17 @@ def test_atp_participation():
 
 
 # Replace _ with number of metabolites ACALD and ALCD2x share (should be a number).
-metabolites_in_common = _
 
+ACALD = model.reactions.get_by_id("ACALD")
+ALCD2x = model.reactions.get_by_id("ALCD2x")
+metabolites_in_common = A_v[model.reactions.index(ACALD)][model.reactions.index(ALCD2x)]
 
 ###### Don't touch
 def test_ACALD_ALCAD2x_metabolites_in_common():
     assert metabolites_in_common == 4
 ###### this
 
-
+test_ACALD_ALCAD2x_metabolites_in_common()
 # 7. Find the top 10 most connected metabolites.
 # Hint:
 # 1. You can use `zip` to zip two lists together. zip(['a', 'b', 'c'], [1, 2, 3]) => zip([['a', 1], ...]) 
@@ -114,14 +127,16 @@ def test_ACALD_ALCAD2x_metabolites_in_common():
 
 # Replace _ with a list of metabolites (all of type cobra.core.metabolite.Metabolite) that
 # correspond to the top 10 most connected metabolites (in ascending order)
-top10 = _
+
+
+top10 = list(metabolites_connection.keys())[:10]
 
 ###### Don't touch
 def test_top10():
 	truth = ['h_c', 'h2o_c', 'h_e', 'atp_c', 'adp_c', 'nad_c', 'nadh_c', 'pi_c', 'pyr_c', 'co2_c']
 	assert [metabolite.id for metabolite in top10] == truth
 ###### this
-
+test_top10()
 
 
 
